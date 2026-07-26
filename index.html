@@ -110,6 +110,13 @@
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            /* Establishes body's own stacking context. Without this, a
+               fixed child with z-index:-1 doesn't nest inside body's paint
+               order — it escapes to the root stacking context and gets
+               painted BELOW body's own background (CSS2.1 §E.2, step 3 vs
+               step 2), i.e. it becomes invisible even though it's running.
+               isolation:isolate fixes that without touching layout. */
+            isolation: isolate;
         }
 
         a {
@@ -414,12 +421,29 @@
             display: none;
             flex-direction: column;
             gap: 2px;
-            padding: 8px 0 16px;
-            border-top: 1px solid var(--border-soft);
+            padding: 10px 20px 18px;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            border-top: none;
+            background: rgba(15, 21, 33, 0.97);
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.65);
+            max-width: none;
         }
 
         .mobile-menu.open {
             display: flex;
+        }
+
+        @media (min-width: 721px) {
+            .mobile-menu.open {
+                display: none;
+            }
         }
 
         .mobile-menu a {
@@ -443,9 +467,6 @@
             overflow: hidden;
         }
 
-        /* Scanner sweep — a literal reference to the subject (OCR/document
-       scanning) rather than a generic dot-grid or particle field. Kept
-       to one slow, low-opacity pass so it reads as ambient, not busy. */
         .hero-scan {
             position: absolute;
             inset: 0;
@@ -700,10 +721,6 @@
             transform: translateY(-2px);
         }
 
-        /* SIGNATURE ELEMENT — a schematic of the actual transformation
-       (paper form → extracted fields → live dashboard), built from
-       the one project every recruiter should read first. Concrete
-       rather than an abstract status bar. */
         .diagram {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -1747,6 +1764,41 @@
         }
 
         /* ===========================================================
+       AMBIENT BACKGROUND — fixed, full-viewport layer sitting behind
+       every section (z-index -1, requires body { isolation: isolate }
+       above so it paints above body's own background instead of under
+       it — see that rule for why). Canvas element inside is driven by
+       the bgNetwork() script: a layered neural network with forward-
+       propagating signal pulses, plus a PCB/circuit-trace layer.
+       This div also carries a faint static radial-gradient wash so
+       there's still ambient color even on the single static frame
+       shown under prefers-reduced-motion.
+    =========================================================== */
+        .bg-ambient {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+            background: radial-gradient(circle at 20% 10%, rgba(59, 130, 246, 0.08), transparent 55%),
+                radial-gradient(circle at 85% 90%, rgba(20, 184, 166, 0.07), transparent 55%);
+        }
+
+        .bg-ambient canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.85;
+        }
+
+        @media (max-width: 720px) {
+            .bg-ambient canvas {
+                opacity: 0.65;
+            }
+        }
+
+        /* ===========================================================
        PRINT — recruiters routinely "Print to PDF" a candidate page.
        Strip chrome/animation, force light background, keep content.
     =========================================================== */
@@ -1760,6 +1812,7 @@
             .scroll-progress,
             .hero-scan,
             .hero-beam,
+            .bg-ambient,
             .marquee,
             .btn-row,
             .skip-link {
@@ -1808,6 +1861,10 @@
 </head>
 
 <body>
+    <div class="bg-ambient" aria-hidden="true">
+        <canvas id="bgCanvas"></canvas>
+    </div>
+
     <a class="skip-link" href="#main">Skip to content</a>
 
     <div class="scroll-progress" id="scrollProgress"></div>
@@ -1856,7 +1913,11 @@
                     </div>
                     <p class="role-type"><span class="mono-caret">&gt;</span> <span id="roleType"></span><span
                             class="caret" aria-hidden="true"></span></p>
-                    <p class="hero-sub">I'm Sarthak — a final-year Computer Science student who ended up specializing in AI/ML almost by accident, then couldn't stop. I work across OCR pipelines, RAG systems, and computer vision, mostly in Python with FastAPI, LangChain, and scikit-learn. I like projects where the win is obvious — a form that used to take a week now takes a second, a document that used to need someone to read it now answers questions on its own.</p>
+                    <p class="hero-sub">I'm Sarthak — a final-year Computer Science student who ended up specializing in
+                        AI/ML almost by accident, then couldn't stop. I work across OCR pipelines, RAG systems, and
+                        computer vision, mostly in Python with FastAPI, LangChain, and scikit-learn. I like projects
+                        where the win is obvious — a form that used to take a week now takes a second, a document that
+                        used to need someone to read it now answers questions on its own.</p>
 
                     <div class="btn-row">
                         <a class="btn btn-primary" href="sarthak_resume.pdf" download>Download résumé ↓</a>
@@ -1868,7 +1929,7 @@
 
                     <div class="trust-row">
                         <span><span aria-hidden="true">✓</span>4 shipped ML/AI systems</span>
-                        <span><span aria-hidden="true">✓</span>Graduating Jun 2026</span>
+                        <span><span aria-hidden="true">✓</span>Graduating Aug 2026</span>
                         <span><span aria-hidden="true">✓</span>Full-stack + ML</span>
                         <span><span aria-hidden="true">✓</span>Open to relocation</span>
                     </div>
@@ -1919,13 +1980,16 @@
                             manual entry remaining</div>
                         <div class="log-line"><span class="ok">✓</span> OCR extraction accuracy improved
                             <strong>25%</strong>
-                            after preprocessing tune</div>
+                            after preprocessing tune
+                        </div>
                         <div class="log-line"><span class="ok">✓</span> reporting lag reduced from 7 days →
                             <strong>real-time</strong>
-                            for 10 stakeholders</div>
+                            for 10 stakeholders
+                        </div>
                         <div class="log-line"><span class="ok">✓</span> evaluation cycle time cut
                             <strong>70–80%</strong> end to
-                            end</div>
+                            end
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2296,7 +2360,7 @@
                     <div class="edu-card reveal">
                         <h3>B.Tech, Computer Science &amp; Engineering</h3>
                         <div class="muted">Nutan College of Engineering &amp; Research, Pune</div>
-                        <div class="mono-meta">Aug 2022 — Jun 2026</div>
+                        <div class="mono-meta">Aug 2022 — Aug 2026</div>
                     </div>
                     <div class="edu-card reveal" style="--rd:80ms">
                         <ul class="cert-list">
@@ -2340,6 +2404,706 @@
     </main>
 
     <script>
+        // ===========================================================
+        // AMBIENT BACKGROUND — neural network signal propagation +
+        // PCB/circuit-trace layer.
+        //
+        // Engineering notes (why it's built this way, not just what it does):
+        // - Single canvas, single rAF loop. No DOM nodes per particle —
+        //   everything is drawn, nothing is layouted, so cost stays flat
+        //   regardless of how "busy" the scene looks.
+        // - Draw calls are batched by color/state (all edges of a kind in
+        //   one pass, all nodes in one pass) to minimize canvas state
+        //   changes, which is where most 2D canvas time actually goes.
+        // - Layout (node positions, edge list, bezier control points,
+        //   circuit trace paths) is computed once per resize, not per
+        //   frame. Only cheap per-frame math (sine bob, lerp, decay) runs
+        //   inside the loop.
+        // - Resize is debounced; a continuous drag-resize shouldn't thrash
+        //   layout recomputation on every pixel.
+        // - Device/context awareness: node density scales down on
+        //   narrow viewports and on devices that signal low headroom
+        //   (coarse pointer + low core count ≈ phone/tablet). The loop
+        //   also fully stops — not just "renders less" — when the tab is
+        //   hidden, the window is blurred, or the OS asks for reduced
+        //   motion, and it listens for that last preference changing live.
+        // - Signal pulses carry a decaying "activation" into the node/edge
+        //   they arrive at, so the parts of the net currently "firing"
+        //   read brighter — an actual forward-propagation visualization,
+        //   not just dots sliding along lines.
+        // - CV/OCR layer: occasional "detection" reticles (matching the
+        //   .bbox corner-bracket motif used elsewhere on the page) sweep
+        //   across the network, briefly framing a cluster of nodes like
+        //   an object detector locking onto a region — a direct nod to
+        //   the OpenCV/Tesseract work described in Experience.
+        // - Circuit-trace layer: a second, independent grid of right-
+        //   angle PCB-style traces runs underneath the network, with
+        //   bright "current" pulses travelling along them — a nod to
+        //   the backend/deployment side of the stack (FastAPI, Docker,
+        //   REST APIs) rather than just the modeling side.
+        // ===========================================================
+        (function bgNetwork() {
+            var canvas = document.getElementById('bgCanvas');
+            if (!canvas || !canvas.getContext) return;
+            var ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+
+            var ACCENT = '59,130,246';   // --accent  (blue)
+            var ACCENT2 = '20,184,166';  // --accent-2 (teal)
+
+            var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+            var coarseQuery = window.matchMedia('(pointer: coarse)');
+            var reducedMotion = motionQuery.matches;
+
+            var W = 0, H = 0, DPR = 1;
+            var layers = [];        // layers[l] = [{x, y, baseY, phase, r, hue}]
+            var edges = [];         // {l, a, b, cx, cy, heat}   cx/cy = bezier control pt
+            var outMap = [];        // outMap[l][i] -> edge indices leaving that node
+            var nodeActivation = []; // nodeActivation[l][i] -> 0..1 decaying glow
+            var pulses = [];
+            var labels = [];
+
+            // Circuit-trace (PCB) layer — independent grid of right-angle
+            // paths with travelling current pulses. Sits behind the
+            // neural net, low-opacity, reinforcing "systems engineer"
+            // alongside the "ML researcher" motif above.
+            var traces = [];        // [{points:[{x,y}...], len}]
+            var tracePulses = [];   // {trace, dist, speed}
+            var tracePadsCache = [];
+
+            var annotations = [];
+
+            var rafId = null;
+            var lastTime = 0;
+            var pulseAccum = 0;
+            var labelAccum = 0;
+            var annotationAccum = 0;
+            var tracePulseAccum = 0;
+            var resizeTimer = null;
+            var isActive = false;   // loop actually running
+
+            var TOKENS = ['softmax', 'attention', 'embedding', 'RAG', 'fine-tune',
+                'gradient \u2207', 'transformer', 'inference', 'tokenize', 'cosine-sim',
+                'loss \u2193', 'k-means', 'OCR', 'LangChain', 'top-k', 'ReLU', 'F1 0.94',
+                'vector DB', 'prompt', 'epoch', 'Docker', 'FastAPI', 'REST', 'batch'];
+
+            var DETECT_LABELS = ['region · 0.9' + (2 + Math.floor(Math.random() * 7)),
+                'roi · scan', 'text-block', 'feature-map', 'anchor', 'bbox · nms'];
+
+            var RETRIEVAL_LABELS = ['top-k=2', 'nearest-neighbor', 'vector search', 'retrieved · ctx'];
+
+            var CLUSTER_LABELS = ['k-means · k=' + (2 + Math.floor(Math.random() * 3)),
+                'centroid', 'cluster fit'];
+
+            // ---- device/quality tier -------------------------------------------------
+            function lowPowerDevice() {
+                var cores = navigator.hardwareConcurrency || 4;
+                return coarseQuery.matches && cores <= 4;
+            }
+
+            function quality() {
+                var tier = lowPowerDevice() ? 0.6 : 1;
+                if (W < 480) tier *= 0.75;
+                return tier;
+            }
+
+            function layerShape() {
+                var t = quality();
+                var base = W < 720 ? [3, 5, 5, 3] : [4, 7, 8, 6, 3];
+                return base.map(function (n) { return Math.max(2, Math.round(n * t)); });
+            }
+
+            // ---- layout (computed once per resize, not per frame) --------------------
+            function buildLayout() {
+                var counts = layerShape();
+                var padX = W * 0.08, padY = H * 0.14;
+                var usableW = W - padX * 2, usableH = H - padY * 2;
+
+                layers = counts.map(function (n, l) {
+                    var x = counts.length > 1 ? padX + (usableW * l) / (counts.length - 1) : W / 2;
+                    var col = [];
+                    for (var i = 0; i < n; i++) {
+                        var y = n > 1 ? padY + (usableH * i) / (n - 1) : H / 2;
+                        col.push({
+                            x: x, baseY: y, y: y,
+                            phase: Math.random() * Math.PI * 2,
+                            r: 2.2 + Math.random() * 1.5,
+                            c: Math.random() < 0.6 ? ACCENT : ACCENT2
+                        });
+                    }
+                    return col;
+                });
+
+                edges = [];
+                outMap = layers.map(function (col) { return col.map(function () { return []; }); });
+                nodeActivation = layers.map(function (col) { return col.map(function () { return 0; }); });
+
+                for (var l = 0; l < layers.length - 1; l++) {
+                    for (var a = 0; a < layers[l].length; a++) {
+                        var fanOut = 1 + Math.floor(Math.random() * 2); // 1-2 forward links
+                        for (var k = 0; k < fanOut; k++) {
+                            var b = Math.floor(Math.random() * layers[l + 1].length);
+                            var na = layers[l][a], nb = layers[l + 1][b];
+                            var idx = edges.length;
+                            edges.push({
+                                l: l, a: a, b: b,
+                                // gentle bezier bow instead of a straight line —
+                                // reads less like a wiring diagram, more organic
+                                cx: (na.x + nb.x) / 2,
+                                cy: (na.y + nb.y) / 2 + (Math.random() - 0.5) * 30,
+                                heat: 0
+                            });
+                            outMap[l][a].push(idx);
+                        }
+                    }
+                }
+                pulses = [];
+                annotations = [];
+                buildTraces();
+            }
+
+            // Builds a set of right-angle PCB-style traces scattered across
+            // the viewport: each trace is a short random-walk of horizontal
+            // and vertical segments, capped with a small "pad" circle at
+            // each end (like a component pad on a circuit board).
+            function buildTraces() {
+                traces = [];
+                tracePulses = [];
+                tracePadsCache = [];
+                var t = quality();
+                var cell = W < 720 ? 130 : 100;
+                var count = Math.max(6, Math.round((W * H) / (cell * cell * 900) * 10 * t));
+                count = Math.min(count, 26);
+
+                for (var i = 0; i < count; i++) {
+                    var x = Math.random() * W;
+                    var y = Math.random() * H;
+                    var points = [{ x: x, y: y }];
+                    var segs = 2 + Math.floor(Math.random() * 3);
+                    var horizontal = Math.random() < 0.5;
+                    for (var s = 0; s < segs; s++) {
+                        var len = 40 + Math.random() * 110;
+                        var dir = Math.random() < 0.5 ? -1 : 1;
+                        if (horizontal) { x += dir * len; } else { y += dir * len; }
+                        points.push({ x: x, y: y });
+                        horizontal = !horizontal;
+                    }
+                    // precompute cumulative length for even pulse travel
+                    var cum = [0];
+                    for (var p = 1; p < points.length; p++) {
+                        var dx = points[p].x - points[p - 1].x, dy = points[p].y - points[p - 1].y;
+                        cum.push(cum[p - 1] + Math.sqrt(dx * dx + dy * dy));
+                    }
+                    traces.push({
+                        points: points,
+                        cum: cum,
+                        total: cum[cum.length - 1],
+                        c: Math.random() < 0.5 ? ACCENT : ACCENT2
+                    });
+                }
+            }
+
+            function tracePointAt(trace, dist) {
+                var cum = trace.cum, pts = trace.points;
+                for (var i = 1; i < cum.length; i++) {
+                    if (dist <= cum[i] || i === cum.length - 1) {
+                        var segLen = cum[i] - cum[i - 1];
+                        var pct = segLen > 0 ? (dist - cum[i - 1]) / segLen : 0;
+                        pct = Math.max(0, Math.min(1, pct));
+                        return {
+                            x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * pct,
+                            y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * pct
+                        };
+                    }
+                }
+                return pts[pts.length - 1];
+            }
+
+            function spawnTracePulse() {
+                if (!traces.length) return;
+                var trace = traces[Math.floor(Math.random() * traces.length)];
+                if (trace.total <= 0) return;
+                tracePulses.push({
+                    trace: trace,
+                    dist: 0,
+                    speed: (0.08 + Math.random() * 0.07) // px per ms
+                });
+            }
+
+            function edgePoint(e, t) {
+                var na = layers[e.l][e.a], nb = layers[e.l + 1][e.b];
+                var mt = 1 - t;
+                // quadratic bezier through the precomputed control point
+                var x = mt * mt * na.x + 2 * mt * t * e.cx + t * t * nb.x;
+                var y = mt * mt * na.y + 2 * mt * t * e.cy + t * t * nb.y;
+                return { x: x, y: y };
+            }
+
+            // ---- spawners --------------------------------------------------------------
+            function spawnPulse() {
+                if (!layers.length || !layers[0].length) return;
+                var startNode = Math.floor(Math.random() * layers[0].length);
+                var outs = outMap[0][startNode];
+                if (!outs.length) return;
+                pulses.push({
+                    edge: outs[Math.floor(Math.random() * outs.length)],
+                    t: 0,
+                    speed: 0.00075 + Math.random() * 0.0006
+                });
+            }
+
+            function spawnLabel() {
+                if (labels.length > 4) return;
+                labels.push({
+                    text: TOKENS[Math.floor(Math.random() * TOKENS.length)],
+                    x: W * 0.1 + Math.random() * W * 0.8,
+                    y: H + 20,
+                    vy: 0.14 + Math.random() * 0.12,
+                    age: 0,
+                    life: 9000 + Math.random() * 4000,
+                    c: Math.random() < 0.5 ? ACCENT : ACCENT2
+                });
+            }
+
+            // 'detect' — a corner-bracket reticle frames a small cluster of
+            // adjacent nodes in one layer, holding briefly like a CV model
+            // dwelling on a detected region. Echoes the .bbox component.
+            function spawnDetect() {
+                var l = Math.floor(Math.random() * layers.length);
+                var col = layers[l];
+                if (col.length < 1) return;
+                var start = Math.floor(Math.random() * col.length);
+                var span = Math.min(col.length, 1 + Math.floor(Math.random() * 2));
+                var minY = Infinity, maxY = -Infinity;
+                for (var i = 0; i < span; i++) {
+                    var idx = Math.min(col.length - 1, start + i);
+                    minY = Math.min(minY, col[idx].y);
+                    maxY = Math.max(maxY, col[idx].y);
+                }
+                var pad = 20;
+                annotations.push({
+                    type: 'detect',
+                    x: col[start].x - pad,
+                    y: minY - pad,
+                    w: pad * 2,
+                    h: (maxY - minY) + pad * 2,
+                    age: 0,
+                    life: 2600 + Math.random() * 1000,
+                    label: DETECT_LABELS[Math.floor(Math.random() * DETECT_LABELS.length)]
+                });
+            }
+
+            // 'retrieval' — picks one node as a "query" and draws dashed
+            // lines out to its two nearest neighbors across the whole net
+            // (not just its own layer), each tagged with a similarity
+            // score — a direct nod to the vector-DB / cosine-similarity
+            // top-k lookup at the core of the RAG project above.
+            function spawnRetrieval() {
+                var all = [];
+                for (var l = 0; l < layers.length; l++) {
+                    for (var i = 0; i < layers[l].length; i++) all.push(layers[l][i]);
+                }
+                if (all.length < 5) return;
+                var anchorIdx = Math.floor(Math.random() * all.length);
+                var anchor = all[anchorIdx];
+                var dists = [];
+                for (var k = 0; k < all.length; k++) {
+                    if (k === anchorIdx) continue;
+                    var dx = all[k].x - anchor.x, dy = all[k].y - anchor.y;
+                    dists.push({ x: all[k].x, y: all[k].y, d: Math.sqrt(dx * dx + dy * dy) });
+                }
+                dists.sort(function (a, b) { return a.d - b.d; });
+                var neighbors = dists.slice(0, 2).map(function (n) {
+                    return { x: n.x, y: n.y, sim: Math.max(0.80, Math.min(0.98, 1 - n.d / 700)).toFixed(2) };
+                });
+                annotations.push({
+                    type: 'retrieval',
+                    ax: anchor.x, ay: anchor.y,
+                    neighbors: neighbors,
+                    age: 0,
+                    life: 2800 + Math.random() * 900,
+                    label: RETRIEVAL_LABELS[Math.floor(Math.random() * RETRIEVAL_LABELS.length)]
+                });
+            }
+
+            // 'cluster' — a dashed boundary plus a centroid crosshair around
+            // a small group of adjacent nodes, like one pass of K-Means
+            // settling on a cluster — used in the trainee-analytics and
+            // sentiment-clustering projects above.
+            function spawnCluster() {
+                var l = Math.floor(Math.random() * layers.length);
+                var col = layers[l];
+                if (col.length < 2) return;
+                var start = Math.floor(Math.random() * col.length);
+                var span = Math.min(col.length, 2 + Math.floor(Math.random() * 2));
+                var pts = [];
+                for (var i = 0; i < span; i++) pts.push(col[Math.min(col.length - 1, start + i)]);
+                var cx = 0, cy = 0;
+                for (var p = 0; p < pts.length; p++) { cx += pts[p].x; cy += pts[p].y; }
+                cx /= pts.length; cy /= pts.length;
+                var r = 0;
+                for (var p2 = 0; p2 < pts.length; p2++) {
+                    var dx = pts[p2].x - cx, dy = pts[p2].y - cy;
+                    r = Math.max(r, Math.sqrt(dx * dx + dy * dy));
+                }
+                annotations.push({
+                    type: 'cluster',
+                    cx: cx, cy: cy, r: r + 16,
+                    age: 0,
+                    life: 2800 + Math.random() * 900,
+                    label: CLUSTER_LABELS[Math.floor(Math.random() * CLUSTER_LABELS.length)]
+                });
+            }
+
+            // Only one annotation lives on screen at a time — the scene
+            // shows CV, then RAG retrieval, then classical-ML clustering,
+            // in rotation, rather than layering all three on top of the
+            // network at once.
+            function spawnAnnotation() {
+                if (annotations.length > 0 || layers.length < 2) return;
+                var r = Math.random();
+                if (r < 0.34) spawnDetect();
+                else if (r < 0.67) spawnRetrieval();
+                else spawnCluster();
+            }
+
+            // ---- per-frame update (cheap math only) -------------------------------------
+            function update(dt, ts) {
+                for (var l = 0; l < layers.length; l++) {
+                    for (var i = 0; i < layers[l].length; i++) {
+                        var nd = layers[l][i];
+                        nd.y = nd.baseY + Math.sin(ts * 0.0006 + nd.phase) * 5;
+                        var act = nodeActivation[l][i];
+                        if (act > 0) nodeActivation[l][i] = Math.max(0, act - dt * 0.0016);
+                    }
+                }
+                for (var e = 0; e < edges.length; e++) {
+                    if (edges[e].heat > 0) edges[e].heat = Math.max(0, edges[e].heat - dt * 0.002);
+                }
+
+                for (var p = pulses.length - 1; p >= 0; p--) {
+                    var pulse = pulses[p];
+                    pulse.t += pulse.speed * dt;
+                    var edge = edges[pulse.edge];
+                    edge.heat = 1;
+
+                    if (pulse.t >= 1) {
+                        nodeActivation[edge.l + 1][edge.b] = 1;
+                        var nextLayer = edge.l + 1;
+                        var nextOuts = (nextLayer < outMap.length) ? outMap[nextLayer][edge.b] : null;
+                        if (nextOuts && nextOuts.length) {
+                            pulse.edge = nextOuts[Math.floor(Math.random() * nextOuts.length)];
+                            pulse.t = 0;
+                        } else {
+                            pulses.splice(p, 1);
+                        }
+                    }
+                }
+
+                for (var tp = tracePulses.length - 1; tp >= 0; tp--) {
+                    var trp = tracePulses[tp];
+                    trp.dist += trp.speed * dt;
+                    if (trp.dist >= trp.trace.total) tracePulses.splice(tp, 1);
+                }
+
+                for (var f = labels.length - 1; f >= 0; f--) {
+                    var lb = labels[f];
+                    lb.age += dt;
+                    lb.y -= lb.vy * (dt / 16);
+                    if (lb.age >= lb.life) labels.splice(f, 1);
+                }
+
+                for (var d = annotations.length - 1; d >= 0; d--) {
+                    annotations[d].age += dt;
+                    if (annotations[d].age >= annotations[d].life) annotations.splice(d, 1);
+                }
+
+                pulseAccum += dt;
+                labelAccum += dt;
+                annotationAccum += dt;
+                tracePulseAccum += dt;
+                if (pulseAccum > 420) { pulseAccum = 0; spawnPulse(); }
+                if (labelAccum > 1900) { labelAccum = 0; spawnLabel(); }
+                if (annotationAccum > 3400) { annotationAccum = 0; spawnAnnotation(); }
+                if (tracePulseAccum > 550) { tracePulseAccum = 0; spawnTracePulse(); }
+            }
+
+            // ---- render (batched by state to minimize canvas context switches) --------
+            function render(ts) {
+                ctx.clearRect(0, 0, W, H);
+
+                // circuit-trace layer — drawn first, furthest back
+                ctx.lineWidth = 1;
+                for (var tr = 0; tr < traces.length; tr++) {
+                    var trace = traces[tr];
+                    ctx.strokeStyle = 'rgba(' + trace.c + ',0.14)';
+                    ctx.beginPath();
+                    ctx.moveTo(trace.points[0].x, trace.points[0].y);
+                    for (var pi = 1; pi < trace.points.length; pi++) {
+                        ctx.lineTo(trace.points[pi].x, trace.points[pi].y);
+                    }
+                    ctx.stroke();
+                    // pads at each end
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgba(' + trace.c + ',0.22)';
+                    ctx.arc(trace.points[0].x, trace.points[0].y, 2, 0, Math.PI * 2);
+                    ctx.arc(trace.points[trace.points.length - 1].x, trace.points[trace.points.length - 1].y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                // travelling current pulses along traces
+                for (var tp = 0; tp < tracePulses.length; tp++) {
+                    var trp = tracePulses[tp];
+                    var pt = tracePointAt(trp.trace, trp.dist);
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgba(' + trp.trace.c + ',0.16)';
+                    ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgba(' + trp.trace.c + ',0.85)';
+                    ctx.arc(pt.x, pt.y, 1.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // edges: cold pass (one stroke style, one path for all)
+                ctx.lineWidth = 1.1;
+                ctx.strokeStyle = 'rgba(' + ACCENT + ',0.16)';
+                ctx.beginPath();
+                for (var e = 0; e < edges.length; e++) {
+                    if (edges[e].heat > 0.05) continue; // drawn in the hot pass instead
+                    var edge = edges[e];
+                    var na = layers[edge.l][edge.a], nb = layers[edge.l + 1][edge.b];
+                    ctx.moveTo(na.x, na.y);
+                    ctx.quadraticCurveTo(edge.cx, edge.cy, nb.x, nb.y);
+                }
+                ctx.stroke();
+
+                // edges: hot pass (currently carrying a signal) — drawn individually
+                // since each needs its own alpha, but this set is always small
+                for (var e2 = 0; e2 < edges.length; e2++) {
+                    var edg = edges[e2];
+                    if (edg.heat <= 0.05) continue;
+                    var a2 = layers[edg.l][edg.a], b2 = layers[edg.l + 1][edg.b];
+                    ctx.strokeStyle = 'rgba(' + ACCENT2 + ',' + (0.18 + edg.heat * 0.45) + ')';
+                    ctx.beginPath();
+                    ctx.moveTo(a2.x, a2.y);
+                    ctx.quadraticCurveTo(edg.cx, edg.cy, b2.x, b2.y);
+                    ctx.stroke();
+                }
+
+                // nodes — glow scales with recent activation
+                for (var l = 0; l < layers.length; l++) {
+                    for (var i = 0; i < layers[l].length; i++) {
+                        var n = layers[l][i];
+                        var act = nodeActivation[l][i];
+                        if (act > 0.02) {
+                            ctx.beginPath();
+                            ctx.fillStyle = 'rgba(' + n.c + ',' + (act * 0.3) + ')';
+                            ctx.arc(n.x, n.y, n.r + act * 7, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        ctx.beginPath();
+                        ctx.fillStyle = 'rgba(' + n.c + ',' + (0.7 + act * 0.3) + ')';
+                        ctx.arc(n.x, n.y, n.r + act * 1.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                // pulses — small bright core + soft halo, additive-ish via low-alpha fill
+                for (var p = 0; p < pulses.length; p++) {
+                    var edge3 = edges[pulses[p].edge];
+                    var pt2 = edgePoint(edge3, Math.min(pulses[p].t, 1));
+                    var col = edge3.l % 2 === 0 ? ACCENT2 : ACCENT;
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgba(' + col + ',0.3)';
+                    ctx.arc(pt2.x, pt2.y, 5.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.fillStyle = 'rgba(' + col + ',0.95)';
+                    ctx.arc(pt2.x, pt2.y, 2.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // floating vocabulary
+                if (labels.length) {
+                    ctx.font = '11px "IBM Plex Mono", monospace';
+                    for (var f = 0; f < labels.length; f++) {
+                        var lb = labels[f];
+                        var lt = lb.age / lb.life;
+                        var fade = lt < 0.12 ? lt / 0.12 : (lt > 0.85 ? (1 - lt) / 0.15 : 1);
+                        ctx.fillStyle = 'rgba(' + lb.c + ',' + Math.max(0, 0.4 * fade) + ')';
+                        ctx.fillText(lb.text, lb.x, lb.y);
+                    }
+                }
+
+                // Skill-annotation layer — one of three kinds at a time,
+                // each fading in/out over its short life:
+                if (annotations.length) {
+                    ctx.font = '10px "IBM Plex Mono", monospace';
+                    for (var d = 0; d < annotations.length; d++) {
+                        var an = annotations[d];
+                        var lt2 = an.age / an.life;
+                        var fade2 = lt2 < 0.15 ? lt2 / 0.15 : (lt2 > 0.75 ? (1 - lt2) / 0.25 : 1);
+                        var a = Math.max(0, fade2);
+
+                        if (an.type === 'detect') {
+                            // corner brackets around a node cluster — matches
+                            // the .bbox reticle used in the markup (CV/OCR)
+                            var cLen = 10;
+                            ctx.setLineDash([]);
+                            ctx.strokeStyle = 'rgba(' + ACCENT + ',' + (0.55 * a) + ')';
+                            ctx.lineWidth = 1.6;
+                            ctx.beginPath();
+                            ctx.moveTo(an.x, an.y + cLen); ctx.lineTo(an.x, an.y); ctx.lineTo(an.x + cLen, an.y);
+                            ctx.moveTo(an.x + an.w - cLen, an.y); ctx.lineTo(an.x + an.w, an.y); ctx.lineTo(an.x + an.w, an.y + cLen);
+                            ctx.moveTo(an.x, an.y + an.h - cLen); ctx.lineTo(an.x, an.y + an.h); ctx.lineTo(an.x + cLen, an.y + an.h);
+                            ctx.moveTo(an.x + an.w - cLen, an.y + an.h); ctx.lineTo(an.x + an.w, an.y + an.h); ctx.lineTo(an.x + an.w, an.y + an.h - cLen);
+                            ctx.stroke();
+                            ctx.fillStyle = 'rgba(' + ACCENT + ',' + (0.7 * a) + ')';
+                            ctx.fillText(an.label, an.x, an.y - 6);
+
+                        } else if (an.type === 'retrieval') {
+                            // dashed lines from a query node to its nearest
+                            // neighbors, each tagged with a similarity score
+                            // — vector-DB top-k lookup (RAG/GenAI)
+                            ctx.setLineDash([3, 4]);
+                            ctx.strokeStyle = 'rgba(' + ACCENT2 + ',' + (0.65 * a) + ')';
+                            ctx.lineWidth = 1.3;
+                            for (var n = 0; n < an.neighbors.length; n++) {
+                                var nb = an.neighbors[n];
+                                ctx.beginPath();
+                                ctx.moveTo(an.ax, an.ay);
+                                ctx.lineTo(nb.x, nb.y);
+                                ctx.stroke();
+                                ctx.fillStyle = 'rgba(' + ACCENT2 + ',' + (0.75 * a) + ')';
+                                ctx.fillText(nb.sim, nb.x + 6, nb.y - 6);
+                            }
+                            ctx.setLineDash([]);
+                            ctx.beginPath();
+                            ctx.fillStyle = 'rgba(' + ACCENT2 + ',' + (0.85 * a) + ')';
+                            ctx.arc(an.ax, an.ay, 3.2, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.fillText(an.label, an.ax + 8, an.ay + 14);
+
+                        } else if (an.type === 'cluster') {
+                            // dashed boundary + centroid crosshair around a
+                            // node group — one K-Means pass settling (classical ML)
+                            ctx.setLineDash([2, 5]);
+                            ctx.strokeStyle = 'rgba(' + ACCENT + ',' + (0.55 * a) + ')';
+                            ctx.lineWidth = 1.3;
+                            ctx.beginPath();
+                            ctx.arc(an.cx, an.cy, an.r, 0, Math.PI * 2);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                            ctx.strokeStyle = 'rgba(' + ACCENT + ',' + (0.75 * a) + ')';
+                            ctx.beginPath();
+                            ctx.moveTo(an.cx - 6, an.cy); ctx.lineTo(an.cx + 6, an.cy);
+                            ctx.moveTo(an.cx, an.cy - 6); ctx.lineTo(an.cx, an.cy + 6);
+                            ctx.stroke();
+                            ctx.fillStyle = 'rgba(' + ACCENT + ',' + (0.7 * a) + ')';
+                            ctx.fillText(an.label, an.cx - an.r, an.cy - an.r - 6);
+                        }
+                    }
+                    ctx.setLineDash([]); // don't let a dashed style leak into next frame's edges
+                }
+            }
+
+            function drawStaticFrame() {
+                ctx.clearRect(0, 0, W, H);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(' + ACCENT + ',0.16)';
+                ctx.beginPath();
+                for (var e = 0; e < edges.length; e++) {
+                    var edge = edges[e];
+                    var na = layers[edge.l][edge.a], nb = layers[edge.l + 1][edge.b];
+                    ctx.moveTo(na.x, na.y);
+                    ctx.quadraticCurveTo(edge.cx, edge.cy, nb.x, nb.y);
+                }
+                ctx.stroke();
+                for (var tr = 0; tr < traces.length; tr++) {
+                    var trace = traces[tr];
+                    ctx.strokeStyle = 'rgba(' + trace.c + ',0.14)';
+                    ctx.beginPath();
+                    ctx.moveTo(trace.points[0].x, trace.points[0].y);
+                    for (var pi = 1; pi < trace.points.length; pi++) ctx.lineTo(trace.points[pi].x, trace.points[pi].y);
+                    ctx.stroke();
+                }
+                for (var l = 0; l < layers.length; l++) {
+                    for (var i = 0; i < layers[l].length; i++) {
+                        var n = layers[l][i];
+                        ctx.beginPath();
+                        ctx.fillStyle = 'rgba(' + n.c + ',0.6)';
+                        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // ---- loop control ------------------------------------------------------------
+            function frame(ts) {
+                if (!isActive) return;
+                var dt = lastTime ? Math.min(ts - lastTime, 50) : 16; // clamp: tab-switch spikes shouldn't jump the sim
+                lastTime = ts;
+                update(dt, ts);
+                render(ts);
+                rafId = requestAnimationFrame(frame);
+            }
+
+            function start() {
+                if (isActive || reducedMotion) return;
+                isActive = true;
+                lastTime = 0;
+                rafId = requestAnimationFrame(frame);
+            }
+
+            function stop() {
+                isActive = false;
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+
+            function shouldRun() {
+                return !reducedMotion && !document.hidden && document.hasFocus();
+            }
+
+            function syncRunState() {
+                if (shouldRun()) start(); else stop();
+            }
+
+            // ---- sizing -------------------------------------------------------------------
+            function resizeNow() {
+                DPR = Math.min(window.devicePixelRatio || 1, 2);
+                W = window.innerWidth;
+                H = window.innerHeight;
+                canvas.width = Math.round(W * DPR);
+                canvas.height = Math.round(H * DPR);
+                canvas.style.width = W + 'px';
+                canvas.style.height = H + 'px';
+                ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+                buildLayout();
+                if (!isActive) { reducedMotion ? drawStaticFrame() : render(performance.now()); }
+            }
+
+            function onResize() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(resizeNow, 150);
+            }
+
+            // ---- wire up events -------------------------------------------------------------
+            resizeNow();
+            window.addEventListener('resize', onResize, { passive: true });
+            document.addEventListener('visibilitychange', syncRunState);
+            window.addEventListener('blur', syncRunState);
+            window.addEventListener('focus', syncRunState);
+
+            if ('addEventListener' in motionQuery) {
+                motionQuery.addEventListener('change', function (e) {
+                    reducedMotion = e.matches;
+                    if (reducedMotion) { stop(); drawStaticFrame(); } else { syncRunState(); }
+                });
+            }
+
+            if (reducedMotion) { drawStaticFrame(); } else { syncRunState(); }
+        })();
+
         // ===========================================================
         // HERO HEADING — staggered word reveal, split into spans
         // ===========================================================
@@ -2532,6 +3296,18 @@
                 navToggle.textContent = '☰';
             });
         });
+        var desktopBreak = window.matchMedia('(min-width: 721px)');
+        function closeMobileMenuIfDesktop() {
+            if (desktopBreak.matches) {
+                mobileMenu.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.textContent = '☰';
+            }
+        }
+        if ('addEventListener' in desktopBreak) {
+            desktopBreak.addEventListener('change', closeMobileMenuIfDesktop);
+        }
+        window.addEventListener('resize', closeMobileMenuIfDesktop, { passive: true });
 
         // ===========================================================
         // FIXED HEADER ANCHOR OFFSET
