@@ -1,0 +1,6 @@
+[build]
+  publish = "."
+  command = ""
+
+# This is a plain static site; there is no build step.
+# Publish the repository root directly.
