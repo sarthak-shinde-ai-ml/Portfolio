@@ -15,7 +15,7 @@
     <meta property="og:title" content="Sarthak Shinde — AI/ML Engineer">
     <meta property="og:description"
         content="AI/ML Engineer building production ML systems: OCR pipelines, RAG, and real-time analytics.">
-    <meta property="og:image" content="https://sarthakshinde.dev/og-card.png">
+    <meta property="og:image" content="https://sarthakshinde.dev/og-card.svg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="627">
     <meta property="og:locale" content="en_IN">
@@ -23,7 +23,7 @@
     <meta name="twitter:title" content="Sarthak Shinde — AI/ML Engineer">
     <meta name="twitter:description"
         content="AI/ML Engineer building production ML systems: OCR pipelines, RAG, and real-time analytics.">
-    <meta name="twitter:image" content="https://sarthakshinde.dev/og-card.png">
+    <meta name="twitter:image" content="https://sarthakshinde.dev/og-card.svg">
     <title>Sarthak Shinde — AI/ML Engineer</title>
     <link rel="icon"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A1220'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='16' font-weight='700' fill='%233B82F6' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
@@ -418,43 +418,47 @@
         }
 
         .mobile-menu {
-            display: none;
+            display: none !important;
             flex-direction: column;
-            gap: 2px;
-            padding: 10px 20px 18px;
+            gap: 4px;
+            padding: 16px 20px 20px;
             position: absolute;
             top: calc(100% + 8px);
             left: 0;
             right: 0;
-            border-top: none;
-            background: rgba(15, 21, 33, 0.97);
-            backdrop-filter: blur(16px) saturate(160%);
-            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            background: #0D1626;
             border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.65);
-            max-width: none;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(59, 130, 246, 0.15);
+            z-index: 105;
         }
 
-        .mobile-menu.open {
-            display: flex;
+        @media (max-width: 720px) {
+            .mobile-menu.open {
+                display: flex !important;
+            }
         }
 
         @media (min-width: 721px) {
+            .mobile-menu,
             .mobile-menu.open {
-                display: none;
+                display: none !important;
             }
         }
 
         .mobile-menu a {
             font-family: var(--mono);
-            font-size: 13px;
+            font-size: 13.5px;
+            font-weight: 500;
             color: var(--text-muted);
-            padding: 12px 4px;
+            padding: 12px 10px;
+            border-radius: 6px;
             border-bottom: 1px dashed var(--border-soft);
+            transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
         }
 
         .mobile-menu a:hover {
+            background: var(--surface-2);
             color: var(--accent);
         }
 
@@ -462,7 +466,7 @@
        HERO
     =========================================================== */
         .hero {
-            padding: 150px 0 60px;
+            padding: 125px 0 60px;
             position: relative;
             overflow: hidden;
         }
@@ -535,7 +539,7 @@
             color: var(--text-muted);
             display: inline-flex;
             align-items: center;
-            margin-bottom: 26px;
+            margin-bottom: 68px;
         }
 
         .status-dot {
@@ -2503,6 +2507,7 @@
             function quality() {
                 var tier = lowPowerDevice() ? 0.6 : 1;
                 if (W < 480) tier *= 0.75;
+                if (reducedMotion) tier *= 0.72;
                 return tier;
             }
 
@@ -3048,7 +3053,7 @@
             }
 
             function start() {
-                if (isActive || reducedMotion) return;
+                if (isActive) return;
                 isActive = true;
                 lastTime = 0;
                 rafId = requestAnimationFrame(frame);
@@ -3061,7 +3066,7 @@
             }
 
             function shouldRun() {
-                return !reducedMotion && !document.hidden && document.hasFocus();
+                return !document.hidden;
             }
 
             function syncRunState() {
@@ -3079,7 +3084,7 @@
                 canvas.style.height = H + 'px';
                 ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
                 buildLayout();
-                if (!isActive) { reducedMotion ? drawStaticFrame() : render(performance.now()); }
+                if (!isActive) { render(performance.now()); }
             }
 
             function onResize() {
@@ -3097,11 +3102,11 @@
             if ('addEventListener' in motionQuery) {
                 motionQuery.addEventListener('change', function (e) {
                     reducedMotion = e.matches;
-                    if (reducedMotion) { stop(); drawStaticFrame(); } else { syncRunState(); }
+                    syncRunState();
                 });
             }
 
-            if (reducedMotion) { drawStaticFrame(); } else { syncRunState(); }
+            syncRunState();
         })();
 
         // ===========================================================
@@ -3284,24 +3289,36 @@
         // ===========================================================
         var navToggle = document.getElementById('navToggle');
         var mobileMenu = document.getElementById('mobileMenu');
-        navToggle.addEventListener('click', function () {
-            var isOpen = mobileMenu.classList.toggle('open');
-            navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            navToggle.textContent = isOpen ? '✕' : '☰';
-        });
-        mobileMenu.querySelectorAll('a').forEach(function (a) {
-            a.addEventListener('click', function () {
-                mobileMenu.classList.remove('open');
-                navToggle.setAttribute('aria-expanded', 'false');
-                navToggle.textContent = '☰';
+        if (navToggle && mobileMenu) {
+            navToggle.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = mobileMenu.classList.toggle('open');
+                navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                navToggle.textContent = isOpen ? '✕' : '☰';
             });
-        });
+            mobileMenu.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    mobileMenu.classList.remove('open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                    navToggle.textContent = '☰';
+                });
+            });
+            document.addEventListener('click', function (e) {
+                if (mobileMenu.classList.contains('open') && !mobileMenu.contains(e.target) && !navToggle.contains(e.target)) {
+                    mobileMenu.classList.remove('open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                    navToggle.textContent = '☰';
+                }
+            });
+        }
         var desktopBreak = window.matchMedia('(min-width: 721px)');
         function closeMobileMenuIfDesktop() {
-            if (desktopBreak.matches) {
+            if (desktopBreak.matches && mobileMenu) {
                 mobileMenu.classList.remove('open');
-                navToggle.setAttribute('aria-expanded', 'false');
-                navToggle.textContent = '☰';
+                if (navToggle) {
+                    navToggle.setAttribute('aria-expanded', 'false');
+                    navToggle.textContent = '☰';
+                }
             }
         }
         if ('addEventListener' in desktopBreak) {
